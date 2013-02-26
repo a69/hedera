@@ -1,4 +1,4 @@
-#/usr/bin/python
+#!/usr/bin/python
 
 '''
 Fat tree topology for data center networking
@@ -9,11 +9,10 @@ Fat tree topology for data center networking
 
 from mininet.topo import Topo
 
-class FatTreeTopo(Topo):
+class fatTreeTopo(Topo):
    
-    super(FatTreeTopo, self).__init__()
 
-    class FatTreeNode(object):
+    class fatTreeNode(object):
         def __init__(self, pod = 0, sw = 0, host = 0, dpid = None):
             ''' Create FatTreeNode '''
             if dpid:
@@ -41,6 +40,7 @@ class FatTreeTopo(Topo):
             k : Number of pods (can support upto k^3/4 hosts)
             Speed : speed in Gbps
         '''
+        super(fatTreeTopo, self).__init__()
 
         pods = range(0, k)
         edge_sw = range(0, k/2)
@@ -50,25 +50,25 @@ class FatTreeTopo(Topo):
 
         for p in pods:
             for e in edge_sw:
-                edge = FatTreeTopo.FatTreeNode(p,e,1)
+                edge = fatTreeTopo.fatTreeNode(p,e,1)
                 self.addSwitch(edge.name_str())
 
                 for h in hosts:
-                    host = FatTreeTopo.FatTreeNode(p,e,h)
+                    host = fatTreeTopo.fatTreeNode(p,e,h)
                     self.addHost(host.name_str(), 'IP', host.ip_str())
                     self.addLink(edge,host)
 
                 for a in agg_sw:
-                    agg = FatTreeTopo.FatTreeNode(p,e,1)
+                    agg = fatTreeTopo.fatTreeNode(p,e,1)
                     self.addHost(agg.name_str())
                     self.addLink(agg,edge)
             
             for a in agg_sw:
-                agg = FatTreeTopo.FatTreeNode(p,a,1)
+                agg = fatTreeTopo.fatTreeNode(p,a,1)
                 self.addSwitch(agg.name_str())
 
                 for c in core_sw:
-                    core = FatTreeTopo.FatTreeNode(k,a-k/2+1,c)
+                    core = fatTreeTopo.fatTreeNode(k,a-k/2+1,c)
                     self.addSwitch(core.name_str())
                     self.addLink(agg,core)
 
