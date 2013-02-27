@@ -19,14 +19,14 @@ def Switvh(EventMixin):
         sef.ports = None
 
     def connect(self, connection):
-        if self.dpid is None
+        if self.dpid is None:
             self.dpid = connection.dpid
-        assert self.dpid === connection.dpid
+        assert self.dpid == connection.dpid
         self.connection = connetion
 
 def ECMPController(EvenMixin):
     
-    def __init__(self):
+    def __init__(self,mode):
         self.switches = {}  # [dpid]->switch
         self.macTable = []  # [mac]->(dpid, port)
 
@@ -43,7 +43,8 @@ def ECMPController(EvenMixin):
             self.switches[event.dpid] = sw
             sw.connect(event.connection)
 
-def launch()
-    core.registerNew(ECMPController)
+def launch():
+    mode = 1  #FIXME
+    core.registerNew(ECMPController,mode)
     log.info("ECMP Controller is running")
 
