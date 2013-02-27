@@ -2,13 +2,16 @@
 
 
 from mininet.topo import Topo
-from mininet.node import OVSKernelSwitch, CPULimitedHost
+from mininet.node import Controller, RemoteController, OVSKernelSwitch, CPULimitedHost
 from mininet.net import Mininet
+from mininet.link import TCLink
+from mininet.cli import CLI
+from mininet.util import custom
+from mininet.log import setLogLevel, info, warn, error, debug
 
 from FatTreeTopo import FatTreeTopo
 
-
-from subprocess import Popen
+from subprocess import Popen, PIPE
 from argparse import ArgumentParser
 
 parser = ArgumentParser(description="ECMP routing")
@@ -25,7 +28,7 @@ args = parser.parse_args()
 
 def FatTreeNet(k=4, bw=100, cpu=-1, queue=100):
     
-    Popen("~/pox/pox.py --no-cli ECMPController")
+    Popen("~/pox/pox.py ECMPController", shell=True)
 
     host = custom(CPULimitedHost, cpu=cpu)
     link = custom(TCLink, bw=bw, max_queue_size=queue)
@@ -42,6 +45,22 @@ def ECMPTest(args):
     net.start()
     net.pingAll()
 
+def clean():
+    ''' Clean any the running instances of POX '''
+
+    p = Popen("ps aux | grep 'pox' | awk '{print $2}'",
+            stdout=PIPE, shell=True)
+    p.wait()
+    procs = (p.communicate()[0]).split('\n')
+    for pid in procs:
+        try:
+            pid = int(pid)
+            Popen('kill %d' % pid, shell=True).wait()
+        except:
+            pass
+
 if __name__ == '__main__':
+    
+    clean()
     ECMPTest(args)
     

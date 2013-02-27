@@ -9,10 +9,9 @@ Fat tree topology for data center networking
 
 from mininet.topo import Topo
 
-class fatTreeTopo(Topo):
-   
+class FatTreeTopo(Topo):
 
-    class fatTreeNode(object):
+    class FatTreeNode(object):
         def __init__(self, pod = 0, sw = 0, host = 0, dpid = None):
             ''' Create FatTreeNode '''
             if dpid:
@@ -28,9 +27,9 @@ class fatTreeTopo(Topo):
 
         def name_str(self):
             ''' Return name '''
-            return "%d_$d_%d" % (self.pod, self.sw, self.host)
+            return "%d_%d_%d" % (self.pod, self.sw, self.host)
 
-        def name_str(self):
+        def ip_str(self):
             ''' Return IP address '''
             return "10.%d.%d.%d" % (self.pod, self.sw, self.host)
     
@@ -40,7 +39,7 @@ class fatTreeTopo(Topo):
             k : Number of pods (can support upto k^3/4 hosts)
             Speed : speed in Gbps
         '''
-        super(fatTreeTopo, self).__init__()
+        super(FatTreeTopo, self).__init__()
 
         pods = range(0, k)
         edge_sw = range(0, k/2)
@@ -50,27 +49,28 @@ class fatTreeTopo(Topo):
 
         for p in pods:
             for e in edge_sw:
-                edge = fatTreeTopo.fatTreeNode(p,e,1)
+                edge = FatTreeTopo.FatTreeNode(p,e,1)
                 self.addSwitch(edge.name_str())
 
                 for h in hosts:
-                    host = fatTreeTopo.fatTreeNode(p,e,h)
-                    self.addHost(host.name_str(), 'IP', host.ip_str())
-                    self.addLink(edge,host)
+                    host = FatTreeTopo.FatTreeNode(p,e,h)
+                    opt = {'IP':host.ip_str}
+                    self.addHost(host.name_str(), **opt)
+                    self.addLink(edge.name_str(),host.name_str())
 
                 for a in agg_sw:
-                    agg = fatTreeTopo.fatTreeNode(p,e,1)
+                    agg = FatTreeTopo.FatTreeNode(p,e,1)
                     self.addHost(agg.name_str())
-                    self.addLink(agg,edge)
+                    self.addLink(agg.name_str(),edge.name_str())
             
             for a in agg_sw:
-                agg = fatTreeTopo.fatTreeNode(p,a,1)
+                agg = FatTreeTopo.FatTreeNode(p,a,1)
                 self.addSwitch(agg.name_str())
 
                 for c in core_sw:
-                    core = fatTreeTopo.fatTreeNode(k,a-k/2+1,c)
+                    core = FatTreeTopo.FatTreeNode(k,a-k/2+1,c)
                     self.addSwitch(core.name_str())
-                    self.addLink(agg,core)
+                    self.addLink(agg.name_str(),core.name_str())
 
 
 
