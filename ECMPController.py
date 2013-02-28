@@ -12,7 +12,7 @@ log = core.getLogger()
 
 
 
-def Switvh(EventMixin):
+class Switch(EventMixin):
     def __init__(self):
         self.connection = None
         self.dpid = None
@@ -24,18 +24,20 @@ def Switvh(EventMixin):
         assert self.dpid == connection.dpid
         self.connection = connetion
 
-def ECMPController(EvenMixin):
-    
-    def __init__(self,mode):
+class ECMPController(EventMixin):
+    def __init__(self):
         self.switches = {}  # [dpid]->switch
-        self.macTable = []  # [mac]->(dpid, port)
+        self.macTable = {}  # [mac]->(dpid, port)
 
         core.openflow.addListeners(self)
 
-
+    def _handle_PacketIn(self, event):
+        log.info("Got a new packet")
+        
     def _handle_ConnectionUp(self, event):
         sw = self.switches.get(event.dpid)
         sw_str = dpidToStr(event.dpid)
+        log.info("A new switch came up: %s", sw_str)
 
         if sw is None:
             log.info("Added a new switch %s" % sw_str)
@@ -43,8 +45,8 @@ def ECMPController(EvenMixin):
             self.switches[event.dpid] = sw
             sw.connect(event.connection)
 
+
 def launch():
-    mode = 1  #FIXME
-    core.registerNew(ECMPController,mode)
+    core.registerNew(ECMPController)
     log.info("ECMP Controller is running")
 
