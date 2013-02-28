@@ -9,10 +9,14 @@ from mininet.cli import CLI
 from mininet.util import custom
 from mininet.log import setLogLevel, info, warn, error, debug
 
-from FatTreeTopo import FatTreeTopo
+from DCTopo import FatTreeTopo, NonBlockingTopo
 
 from subprocess import Popen, PIPE
 from argparse import ArgumentParser
+
+from time import sleep
+import os
+import sys
 
 parser = ArgumentParser(description="ECMP routing")
 parser.add_argument('-d', '--dir', dest='output_dir', default='/tmp',
@@ -26,14 +30,25 @@ parser.add_argument('-q', '--queue', dest='queue', type=int, default=100,
 
 args = parser.parse_args()
 
-def FatTreeNet(k=4, bw=100, cpu=-1, queue=100):
-    
-    Popen("~/pox/pox.py ECMPController", shell=True)
-
+def NonBlockingNet(k=4, bw=100, cpu=-1, queue=100):
+    print "NonBlocking Net"
+    topo = NonBlockingTopo(k)
+    #topo = BBTopo()
     host = custom(CPULimitedHost, cpu=cpu)
     link = custom(TCLink, bw=bw, max_queue_size=queue)
+
+    net = Mininet(topo, host=host, link=link, switch=OVSKernelSwitch,
+            controller=Controller)
+    return net
+
+def FatTreeNet(k=4, bw=100, cpu=-1, queue=100):
+
+    pox_c = Popen("~/pox/pox.py ECMPController", shell=True)
+
     topo = FatTreeTopo(k, speed=bw/1000)
-    
+    host = custom(CPULimitedHost, cpu=cpu)
+    link = custom(TCLink, bw=bw, max_queue_size=queue)
+
     net = Mininet(topo, host=host, link=link, switch=OVSKernelSwitch,
             controller=RemoteController)
     return net
@@ -44,6 +59,18 @@ def ECMPTest(args):
     net = FatTreeNet( k=k, cpu=args.cpu, bw=bw, queue=args.queue)
     net.start()
     net.pingAll()
+
+def NonBlockingTest(args):
+    k = 4
+    bw = 100
+    net = NonBlockingNet(k=k, cpu=args.cpu, bw=bw, queue=args.queue)
+    
+    # wait for the switches to connect to the controller
+    sleep(1)
+
+    net.start()
+    net.pingAll()
+    #net.stop()
 
 def clean():
     ''' Clean any the running instances of POX '''
@@ -61,6 +88,8 @@ def clean():
 
 if __name__ == '__main__':
     
-    clean()
+    #clean()
+    #NonBlockingTest(args)
     ECMPTest(args)
-    
+
+    os.system('sudo mn -c') 
