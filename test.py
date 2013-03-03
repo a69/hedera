@@ -31,9 +31,9 @@ parser.add_argument('-q', '--queue', dest='queue', type=int, default=100,
 args = parser.parse_args()
 
 def NonBlockingNet(k=4, bw=100, cpu=-1, queue=100):
-    print "NonBlocking Net"
+    ''' Create a NonBlocking Net ''' 
+    
     topo = NonBlockingTopo(k)
-    #topo = BBTopo()
     host = custom(CPULimitedHost, cpu=cpu)
     link = custom(TCLink, bw=bw, max_queue_size=queue)
 
@@ -42,35 +42,38 @@ def NonBlockingNet(k=4, bw=100, cpu=-1, queue=100):
     return net
 
 def FatTreeNet(k=4, bw=100, cpu=-1, queue=100):
+    ''' Create a Fat-Tree network '''
 
-    pox_c = Popen("~/pox/pox.py ECMPController", shell=True)
-
+    #pox_c = Popen("~/pox/pox.py ECMPController --topo=ft", shell=True)
     topo = FatTreeTopo(k, speed=bw/1000)
     host = custom(CPULimitedHost, cpu=cpu)
     link = custom(TCLink, bw=bw, max_queue_size=queue)
+    
+    print "** Created the Topo"
+    # wait for the switches to connect to the controller
+    info('** Waiting for switches to connect to the controller\n')
+    #sleep(5)
 
     net = Mininet(topo, host=host, link=link, switch=OVSKernelSwitch,
-            controller=RemoteController)
+            controller=Controller)
+
     return net
 
 def ECMPTest(args):
     k = 4
     bw = 100
     net = FatTreeNet( k=k, cpu=args.cpu, bw=bw, queue=args.queue)
+    print "** Create the Network"
     net.start()
+    print "** Start Pinging"
     net.pingAll()
 
 def NonBlockingTest(args):
     k = 4
     bw = 100
-    net = NonBlockingNet(k=k, cpu=args.cpu, bw=bw, queue=args.queue)
-    
-    # wait for the switches to connect to the controller
-    sleep(1)
-
+    net = NonBlockingNet(k=k, cpu=args.cpu, bw=bw, queue=args.queue)    
     net.start()
     net.pingAll()
-    #net.stop()
 
 def clean():
     ''' Clean any the running instances of POX '''
@@ -88,7 +91,7 @@ def clean():
 
 if __name__ == '__main__':
     
-    #clean()
+    clean()
     #NonBlockingTest(args)
     ECMPTest(args)
 
