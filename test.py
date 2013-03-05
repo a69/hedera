@@ -44,18 +44,16 @@ def NonBlockingNet(k=4, bw=100, cpu=-1, queue=100):
 def FatTreeNet(k=4, bw=100, cpu=-1, queue=100):
     ''' Create a Fat-Tree network '''
 
-    #pox_c = Popen("~/pox/pox.py ECMPController --topo=ft", shell=True)
+    pox_c = Popen("~/pox/pox.py ECMPController --topo=ft", shell=True)
+    #topo = NonBlockingTopo(k)
     topo = FatTreeTopo(k, speed=bw/1000)
     host = custom(CPULimitedHost, cpu=cpu)
     link = custom(TCLink, bw=bw, max_queue_size=queue)
     
     print "** Created the Topo"
-    # wait for the switches to connect to the controller
-    info('** Waiting for switches to connect to the controller\n')
-    #sleep(5)
 
     net = Mininet(topo, host=host, link=link, switch=OVSKernelSwitch,
-            controller=Controller)
+            controller=RemoteController)
 
     return net
 
@@ -63,10 +61,16 @@ def ECMPTest(args):
     k = 4
     bw = 100
     net = FatTreeNet( k=k, cpu=args.cpu, bw=bw, queue=args.queue)
-    print "** Create the Network"
+    
+    print "** Createid the Network"
+    
+    # wait for the switches to connect to the controller
+    info('** Waiting for switches to connect to the controller\n')
+    sleep(5)
+    
     net.start()
     print "** Start Pinging"
-    net.pingAll()
+    net.pingPair() 
 
 def NonBlockingTest(args):
     k = 4
