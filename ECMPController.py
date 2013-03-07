@@ -15,7 +15,7 @@ from pox.lib.packet.ipv4 import ipv4
 from pox.lib.packet.udp import udp
 from pox.lib.packet.tcp import tcp
 
-from util import buildTopo
+from util import buildTopo, getRouting
 
 
 log = core.getLogger()
@@ -39,22 +39,34 @@ class Switch(EventMixin):
         msg = of.ofp_packet_out(in_port=of.OFPP_NONE, data = data)
         msg.actions.append(of.ofp_action_output(port = outport))
         self.connection.send(msg)
-
+    
+    def send_packet_bufid(self, outport, buffer_id = -1):
+        msg = of.ofp_packet_out(in_port=of.OFPP_NONE)
+        msg.actions.append(of.ofp_action_output(port = outport)) 
+        msg.buffer_id = buffer_id
+        self.connection.send(msg)
+                        
     def install(self, port, match, buf = -1, idle_timeout = 0, hard_timeout = 0):
+        print port
+        print self.dpid
+
         msg = of.ofp_flow_mod()
         msg.match = match
         msg.idle_timeout = idle_timeout
         msg.hard_timeout = hard_timeout
         msg.actions.append(of.ofp_action_output(port = port))
-        msg.buffer_id = buf
-                               
+        msg.buffer_id = buf          
+        msg.flags = of.OFPFF_SEND_FLOW_REM
+
         self.connection.send(msg)
+        print "Done"
 
 class ECMPController(EventMixin):
-    def __init__(self, t):
+    def __init__(self, t, r):
         self.switches = {}  # [dpid]->switch
         self.macTable = {}  # [mac]->(dpid, port)
         self.t = t          # Topo object
+        self.r = r          # Routng object
         self.all_switches_up = False
         core.openflow.addListeners(self)
     
@@ -76,44 +88,46 @@ class ECMPController(EventMixin):
 
     def _flood(self, event):
         ''' Broadcast to every output port '''
+        print "Flood The hosts"
         packet = event.parsed
         dpid = event.dpid
         in_port = event.port
         t = self.t 
         # Broadcast to every output port except the input on the input switch.
         for sw_name in t.layer_nodes(t.LAYER_EDGE):
-            for host_name in t.layer_nodes(t.LAYER_HOST):
-                p = t.port(sw_name, host_name)
-                if p is not None:
-                    sw_port, host_port = p
-                    sw = t.node_gen(name = sw_name).dpid
-                    # Send packet out each non-input host port
-                    if sw != dpid or (sw == dpid and in_port != sw_port):
-                        self.switches[sw].send_packet_data(sw_port, event.data)
+            for host_name in t.lower_nodes(sw_name):
+                sw_port, host_port = t.port(sw_name, host_name)
+                sw = t.node_gen(name = sw_name).dpid
+
+                # Send packet out each non-input host port
+                if sw != dpid or (sw == dpid and in_port != sw_port):
+                    self.switches[sw].send_packet_data(sw_port, event.data)
 
 
-    def _install_reactive_path(self, event, out_dpid, out_port, packet):
+    def _install_reactive_path(self, event, out_dpid, final_out_port, packet):
         ''' Install entries on route between two switches. '''
         in_name = self.t.node_gen(dpid = event.dpid).name_str()
         out_name = self.t.node_gen(dpid = out_dpid).name_str()
         hash_ = self._ecmp_hash(packet)
-        #route = self.get_route(in_name, out_name, hash_) 
+        route = self.r.get_route(in_name, out_name, hash_) 
+        print "Route:",route        
+        
         match = of.ofp_match.from_packet(packet)
 
-
-        #for node in route:
-
-        #   node_dpid = self.t.node_gen(name = node).dpid
-        #   self.switches[node_dpid].install(out_port, match, idle_timeout = 10)
+        for i, node in enumerate(route):
+            node_dpid = self.t.node_gen(name = node).dpid
+            if i < len(route) - 1:
+                next_node = route[i + 1]
+                out_port, next_in_port = self.t.port(node, next_node)
+            else:
+                out_port = final_out_port
+            self.switches[node_dpid].install(out_port, match, idle_timeout = 10)
+        
 
     def _handle_PacketIn(self, event):
         if not self.all_switches_up:
             log.info("Saw PacketIn before all switches were up - ignoring." )
             return
-
-        sw_name = self.t.node_gen(dpid = event.dpid).name_str() 
-        log.info("Switch %s got a new packet form port %d" % (sw_name,
-            event.port))
         
         packet = event.parsed
         dpid = event.dpid
@@ -124,9 +138,11 @@ class ECMPController(EventMixin):
 
         # Insert flow, deliver packet directly to destination.
         if packet.dst in self.macTable:
-            print "Gotcha"
             out_dpid, out_port = self.macTable[packet.dst]
             self._install_reactive_path(event, out_dpid, out_port, packet)
+        
+            self.switches[out_dpid].send_packet_data(out_port, event.data)
+            
         else:
             self._flood(event)
 
@@ -152,13 +168,14 @@ class ECMPController(EventMixin):
             log.info("All of the switches are up")
             self.all_switches_up = True
 
-def launch(topo = None):
+def launch(topo = None, routing = None):
     print topo
     if not topo:
         raise Exception ("Please specify the topology")
     else: 
         t = buildTopo(topo)
+    r = getRouting(routing, t)
 
-    core.registerNew(ECMPController, t)
+    core.registerNew(ECMPController, t, r)
     log.info("** ECMP Controller is running")
 

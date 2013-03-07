@@ -110,6 +110,8 @@ class FatTreeTopo(Topo):
 
         self.k = k
         self.node_gen = FatTreeNode
+        self.numPods = k
+        self.aggPerPod = k / 2
 
         pods = range(0, k)
         edge_sw = range(0, k/2)
@@ -119,8 +121,9 @@ class FatTreeTopo(Topo):
 
         for p in pods:
             for e in edge_sw:
-                edge = FatTreeNode(p, e, 1)
-                self.addSwitch(edge.name_str())
+                edge = self.node_gen(p, e, 1)
+                edge_opts = self.def_opts(edge.name_str())
+                self.addSwitch(edge.name_str(), **edge_opts)
 
                 for h in hosts:
                     host = self.node_gen(p, e, h)
@@ -151,13 +154,27 @@ class FatTreeTopo(Topo):
             layer = self.LAYER_CORE
         elif (node.host == 1):
             if (node.sw < self.k/2):
-                layer = sefl.LAYER_EDGE
+                layer = self.LAYER_EDGE
             else:
                 layer = self.LAYER_AGG
         else:
             layer = self.LAYER_HOST
         
         return layer
+    
+    def layer_nodes(self, layer):
+        ''' Return nodes at the given layer '''
+        return [n for n in self.g.nodes() if self.layer(n) == layer]
+   
+    def upper_nodes(self, name):
+        ''' Return nodes at one layer higher(closer to core) '''
+        layer = self.layer(name) - 1
+        return [n for n in self.g[name] if self.layer(n) == layer]
+
+    def lower_nodes(self, name):
+        '''Return edges one layer lower (closer to hosts) '''
+        layer = self.layer(name) + 1
+        return [n for n in self.g[name] if self.layer(n) == layer]
 
     def def_opts(self, name):
         ''' return default dict for FatTree node '''
