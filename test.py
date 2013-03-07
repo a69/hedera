@@ -16,15 +16,17 @@ from subprocess import Popen, PIPE
 from argparse import ArgumentParser
 import multiprocessing
 from time import sleep
+from monitor.monitor import monitor_devs_ng
 import os
 import sys
 
 parser = ArgumentParser(description="ECMP routing")
 
-parser.add_argument('-d', '--dir', dest='output_dir', default='/tmp',
+parser.add_argument('-d', '--dir', dest='output_dir', default='log',
         help='Output directory')
 
-parser.add_argument('-i', '--input', dest='input_file', default='/inputs',
+parser.add_argument('-i', '--input', dest='input_file',
+        default='inputs/all_to_all_data',
         help='Traffic generator input file')
 
 parser.add_argument('-t', '--time', dest='time', type=int, default=30,
@@ -77,8 +79,13 @@ def trafficGen(args, hosts, net):
     for h in hosts:
         tg_cmd = '%s -f %s -i %s -l %d -p %d 2&>1 > %s/%s.out &' % (traffic_gen,
                 args.input_file, h.defaultIntf(), listen_port, sample_period_us,
-                args.output_dir, , h.name)
+                args.output_dir, h.name)
         h.cmd(tg_cmd)
+   
+    print h.defaultIntf()
+    print args.input_file
+    print listen_port
+    print sample_period_us
     
     sleep(1)
 
@@ -87,12 +94,13 @@ def trafficGen(args, hosts, net):
         h.cmd('nc -nzv %s %d' % (h.IP(), listen_port))
 
 
-    monitors = multiprocessing.Process(target = monitor_devs_ng, args =
+    monitor = multiprocessing.Process(target = monitor_devs_ng, args =
         ('%s/rate.txt' % args.output_dir, 0.01))
     
     monitor.start()
 
-    sleep(args.time)
+    #sleep(args.time)
+    sleep(5)
 
     monitor.terminate()
 
@@ -103,7 +111,8 @@ def trafficGen(args, hosts, net):
 def ECMPTest(args):
     k = 4
     bw = 100
-    net = FatTreeNet( k=k, cpu=args.cpu, bw=bw, queue=args.queue)
+    queue = 100
+    net = FatTreeNet( k=k, cpu=args.cpu, bw=bw, queue=queue)
     
     # wait for the switches to connect to the controller
     info('** Waiting for switches to connect to the controller\n')
@@ -112,6 +121,7 @@ def ECMPTest(args):
     net.start()
     print "** Start Pinging"
     net.pingPair() 
+    net.stop()
 
 def NonBlockingTest(args):
     k = 4
@@ -124,6 +134,9 @@ def NonBlockingTest(args):
     sleep(1)
 
     net.pingAll()
+
+    hosts = net.hosts
+
 
     trafficGen(args, hosts, net)
 
@@ -145,9 +158,10 @@ def clean():
 
 if __name__ == '__main__':
     
-
-    if not os.path.exists(args.dir):
-        os.makedirs(args.dir)
+    setLogLevel( 'info' )
+    if not os.path.exists(args.output_dir):
+        print args.output_dir
+        os.makedirs(args.output_dir)
 
     clean()
     
