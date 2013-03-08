@@ -2,7 +2,7 @@
 
 from DCTopo import FatTreeTopo
 
-from routing import HashedRouting
+from DCRouting import HashedRouting
 
 TOPOS = {'ft': FatTreeTopo}
 ROUTING = {'ECMP' : HashedRouting}

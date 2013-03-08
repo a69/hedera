@@ -6,6 +6,9 @@ import logging
 import sys
 sys.path.append('/home/ubuntu/hedera/')
 
+from struct import pack
+from zlib import crc32
+
 from pox.core import core
 import pox.openflow.libopenflow_01 as of
 from pox.lib.revent import EventMixin
@@ -84,7 +87,6 @@ class DCController(EventMixin):
 
     def _flood(self, event):
         ''' Broadcast to every output port '''
-        print "Flood The hosts"
         packet = event.parsed
         dpid = event.dpid
         in_port = event.port
@@ -106,8 +108,9 @@ class DCController(EventMixin):
         out_name = self.t.node_gen(dpid = out_dpid).name_str()
         hash_ = self._ecmp_hash(packet)
         route = self.r.get_route(in_name, out_name, hash_) 
-        print "Route:",route        
-        
+        #print "Route:",route        
+        #print '-'*80
+
         match = of.ofp_match.from_packet(packet)
 
         for i, node in enumerate(route):
@@ -132,6 +135,7 @@ class DCController(EventMixin):
         # Learn MAC address of the sender on every packet-in.
         self.macTable[packet.src] = (dpid, in_port)
 
+	sw_name = self.t.node_gen(dpid = dpid).name_str()
         # Insert flow, deliver packet directly to destination.
         if packet.dst in self.macTable:
             out_dpid, out_port = self.macTable[packet.dst]

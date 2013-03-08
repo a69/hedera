@@ -47,7 +47,6 @@ class Routing(object):
         src_paths = { src : [[src]] }
         dst_paths = { dst : [[dst]] } 
     
-        printsrc, dst
         dst_layer = self.topo.layer(src)
         src_layer = self.topo.layer(dst)
 
