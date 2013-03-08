@@ -47,21 +47,17 @@ class Switch(EventMixin):
         self.connection.send(msg)
                         
     def install(self, port, match, buf = -1, idle_timeout = 0, hard_timeout = 0):
-        print port
-        print self.dpid
-
         msg = of.ofp_flow_mod()
         msg.match = match
         msg.idle_timeout = idle_timeout
         msg.hard_timeout = hard_timeout
         msg.actions.append(of.ofp_action_output(port = port))
-        msg.buffer_id = buf          
+        #msg.buffer_id = buf          
         msg.flags = of.OFPFF_SEND_FLOW_REM
 
         self.connection.send(msg)
-        print "Done"
 
-class ECMPController(EventMixin):
+class DCController(EventMixin):
     def __init__(self, t, r):
         self.switches = {}  # [dpid]->switch
         self.macTable = {}  # [mac]->(dpid, port)
@@ -169,13 +165,12 @@ class ECMPController(EventMixin):
             self.all_switches_up = True
 
 def launch(topo = None, routing = None):
-    print topo
     if not topo:
         raise Exception ("Please specify the topology")
     else: 
         t = buildTopo(topo)
     r = getRouting(routing, t)
 
-    core.registerNew(ECMPController, t, r)
-    log.info("** ECMP Controller is running")
+    core.registerNew(DCController, t, r)
+    log.info("*** Controller is running")
 
