@@ -60,6 +60,13 @@ class Switch(EventMixin):
 
         self.connection.send(msg)
 
+    def stat(self, port):
+        msg = of.ofp_stats_request()
+        # msg.type = of.OFPST_FLOW
+        msg.body = of.ofp_flow_stats_request()
+        #msg.body.match.in_port = port
+        self.connection.send(msg) 
+ 
 class DCController(EventMixin):
     def __init__(self, t, r):
         self.switches = {}  # [dpid]->switch
@@ -122,6 +129,11 @@ class DCController(EventMixin):
                 out_port = final_out_port
             self.switches[node_dpid].install(out_port, match, idle_timeout = 10)
         
+    def _handle_FlowStatsReceived (self, event):
+        print "Got some stats"
+        stats =  event.stats
+        for stat in stats:
+            print stat.packet_count, stat.byte_count, stat.duration_nsec, stat.match.nw_src, stat.match.nw_dst
 
     def _handle_PacketIn(self, event):
         if not self.all_switches_up:
