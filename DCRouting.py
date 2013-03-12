@@ -47,41 +47,52 @@ class Routing(object):
         src_paths = { src : [[src]] }
         dst_paths = { dst : [[dst]] } 
     
-        dst_layer = self.topo.layer(src)
-        src_layer = self.topo.layer(dst)
+        dst_layer = self.topo.layer(dst)
+        src_layer = self.topo.layer(src)
+        
+        lower_layer = src_layer
+        if dst_layer > src_layer:
+            lower_layer = dst_layer
+        
 
-        assert src_layer == dst_layer
-
-        for depth in range(src_layer):
-
+        for front_layer in range(lower_layer-1, -1, -1):
+            if src_layer > front_layer:
             # expand src frontier
-            new_src_paths = {}
-            for node in sorted(src_paths):
-                path_list = src_paths[node]
-                for path in path_list:
-                    last_node = path[-1]
-                    for frontier_node in self.topo.upper_nodes(last_node):
-                        new_src_paths[frontier_node] = [path + [frontier_node]]
-            src_paths = new_src_paths
+                new_src_paths = {}
+                for node in sorted(src_paths):
+                    path_list = src_paths[node]
+                    for path in path_list:
+                        last_node = path[-1]
+                        for frontier_node in self.topo.upper_nodes(last_node):
+                            new_src_paths[frontier_node] = [path + [frontier_node]]
 
+                            if frontier_node in dst_paths:
+                                dst_path_list = dst_paths[frontier_node]
+                                for dst_path in dst_path_list:
+                                    dst_path_copy = copy ( dst_path )
+                                    dst_path_copy.reverse()
+                                    complete_paths.append( path + dst_path_copy)
+                src_paths = new_src_paths
+            
+            if dst_layer > front_layer:
             # expand dst frontier
-            new_dst_paths = {}
-            for node in sorted(dst_paths):        
-                path_list = dst_paths[node]
-                for path in path_list:
-                    last_node = path[-1]
-                    for frontier_node in self.topo.upper_nodes(last_node):
-                        new_dst_paths[frontier_node] = [ path + [frontier_node]]
+                new_dst_paths = {}
+                for node in sorted(dst_paths):        
+                    path_list = dst_paths[node]
+                    for path in path_list:
+                        last_node = path[-1]
+                        for frontier_node in self.topo.upper_nodes(last_node):
+                            new_dst_paths[frontier_node] = [ path + [frontier_node]]
                         
-                        if frontier_node in src_paths:
-                            src_path_list = src_paths[frontier_node]
-                            dst_path_copy = copy( path )
-                            dst_path_copy.reverse()
-                            for src_path in src_path_list:
-                                complete_paths.append( src_path + dst_path_copy)
+                            if frontier_node in src_paths:
+                                src_path_list = src_paths[frontier_node]
+                                dst_path_copy = copy( path )
+                                dst_path_copy.reverse()
+                                for src_path in src_path_list:
+                                    complete_paths.append( src_path + dst_path_copy)
             
-            dst_paths = new_dst_paths
-            
+                dst_paths = new_dst_paths
+
             if complete_paths:
                 return complete_paths
 
