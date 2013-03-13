@@ -62,7 +62,7 @@ def NonBlockingNet(k=4, bw=10, cpu=-1, queue=100):
 def FatTreeNet(k=4, bw=10, cpu=-1, queue=100):
     ''' Create a Fat-Tree network '''
 
-    pox_c = Popen("~/pox/pox.py DCController --topo=ft --routing=ECMP", shell=True)
+    pox_c = Popen("~/pox/pox.py DCController --topo=ft,4 --routing=ECMP", shell=True)
 
     info('*** Creating the topology')
     topo = FatTreeTopo(k)
