@@ -15,8 +15,7 @@ args= parser.parse_args()
     unix_timestamp;iface_name;bytes_out;bytes_in;bytes_total;packets_out;packets_in;packets_total;errors_out;errors_in
     '''
 
-traffics = ['stride1', 'stride8']
-traffics2=['stag_prob_0_2_3_data', 'stag_prob_1_2_3_data', 'stag_prob_2_2_3_data',
+traffics=['stag_prob_0_2_3_data', 'stag_prob_1_2_3_data', 'stag_prob_2_2_3_data',
         'stag_prob_0_5_3_data','stag_prob_1_5_3_data','stag_prob_2_5_3_data','stride1_data', 
         'stride2_data', 'stride4_data', 'stride8_data', 'random0_data', 'random1_data', 'random2_data', 
         'random0_bij_data', 'random1_bij_data','random2_bij_data', 'random_2_flows_data', 
@@ -52,9 +51,9 @@ def get_bisection_bw(input_file, pat_iface):
                 break
     vals = []
     for k in rate.keys():
-        if pat_iface.match(k):       
+        if pat_iface.match(k): 
+            print k
             avg_rate = avg(rate[k][10:-10])
-            #print k,avg_rate
             vals.append(avg_rate)
             
     return fsum(vals)
@@ -64,31 +63,26 @@ def plot_results(args):
     fbb = 16. * 10  #160 mbps
 
     num_plot = 1
-    num_t = 2
+    num_t = 4
     n_t = num_t/num_plot
 
     bb = {'nonblocking' : [], 'ecmp' : []}
 
-    edge_sws = ['4_1_1']
+    sw = '4_1_1'
     for t in traffics:
+        print "Nonblocking:", t
         input_file = args.files + '/nonblocking/%s/rate.txt' % t    
-        vals = []
-        #for sw in edge_sws:
-            #vals.append(get_bisection_bw(input_file, sw))
-        bb['nonblocking'].append(fsum(vals)/fbb)
+        vals = get_bisection_bw(input_file, sw)
+        bb['nonblocking'].append(vals/fbb)
 
-    edge_sws = ['0_0_1', '0_1_1', '1_0_1', '1_1_1', '2_0_1','2_1_1','3_0_1','3_1_1']
-    #edge_sws = ['0_2_1', '0_3_1', '1_2_1', '1_3_1', '2_2_1','2_3_1',
-    #        '3_2_1','3_3_1']
+    sw = '[0-3]_[0-1]_1'
+    #edge_sws = '0_0_1', '0_1_1', '1_0_1', '1_1_1', '2_0_1','2_1_1','3_0_1','3_1_1'
     for t in traffics:
         print t
-        #input_file = args.files + '/fattree-ecmp/%s/rate.txt' % t
-        input_file = args.files + '/%s/rate.txt' % t
-        vals = []
-        for sw in edge_sws:
-            vals.append(get_bisection_bw(input_file, sw))
+        input_file = args.files + '/fattree-ecmp/%s/rate.txt' % t
+        vals = get_bisection_bw(input_file, sw)
         print vals
-        bb['ecmp'].append(fsum(vals)/fbb/2)
+        bb['ecmp'].append(vals/fbb/2)
 
     print bb
 

@@ -195,6 +195,6 @@ def launch(topo = None, routing = None):
         t = buildTopo(topo)
     r = getRouting(routing, t)
 
-    core.registerNew(HederaController, t, r)
+    core.registerNew(DCController, t, r)
     log.info("*** Controller is running")
 
