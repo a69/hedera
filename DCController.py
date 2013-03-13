@@ -1,5 +1,7 @@
-''' Simple data center controller '''
+''' Simple data center controller
 
+    @author Milad Sharif (msharif@stanford.edu)
+'''
 
 import logging
 
@@ -11,9 +13,10 @@ from zlib import crc32
 
 from pox.core import core
 import pox.openflow.libopenflow_01 as of
+
 from pox.lib.revent import EventMixin
 from pox.lib.util import dpidToStr
-
+from pox.lib.recoco import Timer
 from pox.lib.packet.ipv4 import ipv4
 from pox.lib.packet.udp import udp
 from pox.lib.packet.tcp import tcp
@@ -115,11 +118,12 @@ class DCController(EventMixin):
         out_name = self.t.node_gen(dpid = out_dpid).name_str()
         hash_ = self._ecmp_hash(packet)
         route = self.r.get_route(in_name, out_name, hash_) 
-        #print "Route:",route        
-        #print '-'*80
+        if route is None:
+            print in_name, out_name
+            return
+        print route
 
         match = of.ofp_match.from_packet(packet)
-
         for i, node in enumerate(route):
             node_dpid = self.t.node_gen(name = node).dpid
             if i < len(route) - 1:
@@ -130,14 +134,11 @@ class DCController(EventMixin):
             self.switches[node_dpid].install(out_port, match, idle_timeout = 10)
         
     def _handle_FlowStatsReceived (self, event):
-        print "Got some stats"
-        stats =  event.stats
-        for stat in stats:
-            print stat.packet_count, stat.byte_count, stat.duration_nsec, stat.match.nw_src, stat.match.nw_dst
+        pass
 
     def _handle_PacketIn(self, event):
         if not self.all_switches_up:
-            log.info("Saw PacketIn before all switches were up - ignoring." )
+            log.debug("Saw PacketIn before all switches were up - ignoring." )
             return
         
         packet = event.parsed
@@ -147,15 +148,20 @@ class DCController(EventMixin):
         # Learn MAC address of the sender on every packet-in.
         self.macTable[packet.src] = (dpid, in_port)
 
-	sw_name = self.t.node_gen(dpid = dpid).name_str()
+        print '-'*80 
+        print packet.src, packet.dst
+        
+    
         # Insert flow, deliver packet directly to destination.
         if packet.dst in self.macTable:
+            print 'Route:'
             out_dpid, out_port = self.macTable[packet.dst]
             self._install_reactive_path(event, out_dpid, out_port, packet)
         
             self.switches[out_dpid].send_packet_data(out_port, event.data)
             
         else:
+            print 'Flood'
             self._flood(event)
 
     def _handle_ConnectionUp(self, event):
@@ -167,13 +173,15 @@ class DCController(EventMixin):
             log.warn("Ignoring unknown switch %s" % sw_str)
             return
 
-        #log.info("A new switch came up: %s", sw_str)
         if sw is None:
             log.info("Added a new switch %s" % sw_name)
             sw = Switch()
             self.switches[event.dpid] = sw
             sw.connect(event.connection)
-        
+        else:
+            log.debug("Odd - already saw switch %s come up" % sw_str)
+            sw.connect(event.connection)
+
         sw.connection.send(of.ofp_set_config(miss_send_len=MISS_SEND_LEN))
 
         if len(self.switches)==len(self.t.switches()):
@@ -187,6 +195,6 @@ def launch(topo = None, routing = None):
         t = buildTopo(topo)
     r = getRouting(routing, t)
 
-    core.registerNew(DCController, t, r)
+    core.registerNew(HederaController, t, r)
     log.info("*** Controller is running")
 

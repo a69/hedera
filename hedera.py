@@ -1,4 +1,3 @@
-
 from mininet.topo import Topo
 from mininet.node import Controller, RemoteController, OVSKernelSwitch, CPULimitedHost
 from mininet.net import Mininet
@@ -8,7 +7,7 @@ from mininet.util import custom
 from mininet.log import setLogLevel, info, warn, error, debug
 
 from DCTopo import FatTreeTopo, NonBlockingTopo
-#from routing import HashedRouting
+from DCRouting import Routing
 
 from subprocess import Popen, PIPE
 from argparse import ArgumentParser
@@ -17,6 +16,16 @@ from time import sleep
 from monitor.monitor import monitor_devs_ng
 import os
 import sys
+
+
+# Number of pods in Fat-Tree 
+K = 4
+
+# Queue Size
+QUEUE_SIZE = 100
+
+# Link capacity (Mbps)
+BW = 10 
 
 parser = ArgumentParser(description="ECMP routing")
 
@@ -38,7 +47,7 @@ parser.add_argument('-n', '--nonblocking', dest='nonblocking', default=False,
 
 args = parser.parse_args()
 
-def NonBlockingNet(k=4, bw=100, cpu=-1, queue=100):
+def NonBlockingNet(k=4, bw=10, cpu=-1, queue=100):
     ''' Create a NonBlocking Net '''
 
     topo = NonBlockingTopo(k)
@@ -50,17 +59,17 @@ def NonBlockingNet(k=4, bw=100, cpu=-1, queue=100):
 
     return net
 
-def FatTreeNet(k=4, bw=100, cpu=-1, queue=100):
+def FatTreeNet(k=4, bw=10, cpu=-1, queue=100):
     ''' Create a Fat-Tree network '''
 
     pox_c = Popen("~/pox/pox.py DCController --topo=ft --routing=ECMP", shell=True)
 
     info('*** Creating the topology')
-    topo = FatTreeTopo(k, speed=bw/1000)
+    topo = FatTreeTopo(k)
 
     host = custom(CPULimitedHost, cpu=cpu)
     link = custom(TCLink, bw=bw, max_queue_size=queue)
-
+    
     net = Mininet(topo, host=host, link=link, switch=OVSKernelSwitch,
             controller=RemoteController)
 
@@ -76,7 +85,7 @@ def trafficGen(args, hosts, net):
         error('The traffic generator doesn\'t exist. \ncd hedera/cluster_loadgen; make\n')
         return
 
-    info('*** Starting load-generators\n')
+    info('*** Starting load-generators\n %s\n' % args.input_file)
     for h in hosts:
         tg_cmd = '%s -f %s -i %s -l %d -p %d 2&>1 > %s/%s.out &' % (traffic_gen,
                 args.input_file, h.defaultIntf(), listen_port, sample_period_us,
@@ -88,7 +97,7 @@ def trafficGen(args, hosts, net):
     info('*** Triggering load-generators\n')
     for h in hosts:
         h.cmd('nc -nzv %s %d' % (h.IP(), listen_port))
-
+    
 
     monitor = multiprocessing.Process(target = monitor_devs_ng, args =
         ('%s/rate.txt' % args.output_dir, 0.01))
@@ -104,34 +113,28 @@ def trafficGen(args, hosts, net):
         h.cmd('killall loadgen')
 
 def ECMPTest(args):
-    k = 4
-    bw = 100
-    queue = 100
-    net = FatTreeNet( k=k, cpu=args.cpu, bw=bw, queue=queue)
+    net = FatTreeNet( k=K, cpu=args.cpu, bw=BW, queue=QUEUE_SIZE)
     net.start()
 
     # wait for the switches to connect to the controller
     info('** Waiting for switches to connect to the controller\n')
     sleep(5)
 
-    net.pingAll()
-
+    #net.pingAll()
+ 
     hosts = net.hosts
     trafficGen(args, hosts, net)
 
     net.stop()
 
 def NonBlockingTest(args):
-    k = 4
-    bw = 100
-    queue = 100
-    net = NonBlockingNet(k=k, cpu=args.cpu, bw=bw, queue=queue)
+    net = NonBlockingNet(k=K, cpu=args.cpu, bw=BW, queue=QUEUE_SIZE)
     net.start()
 
     info('** Waiting for switches to connect to the controller\n')
     sleep(1)
 
-    net.pingAll()
+    #net.pingAll()
 
     hosts = net.hosts
     trafficGen(args, hosts, net)

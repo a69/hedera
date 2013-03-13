@@ -1,0 +1,16 @@
+Instruction on running the experiment
+
+
+git submodule init
+git submodule update
+
+cd cluster_loadgen
+make
+
+./run_experiment
+
+./gen_plot 
+
+Dependencies:
+    - Latest Mininet (git://github.com/mininet/mininet.git, cs244 branch)
+    - POX (git://github.com/noxrepo/pox)

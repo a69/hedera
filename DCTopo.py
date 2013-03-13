@@ -59,6 +59,7 @@ class NonBlockingTopo(Topo):
         
         core = self.node_gen(k, 1, 1)
         core_opts = self.def_opts(core.name_str())
+        print core_opts
         self.addSwitch(core.name_str(), **core_opts)
 
         for p in pods:
@@ -68,7 +69,8 @@ class NonBlockingTopo(Topo):
                     host_opts = self.def_opts(host.name_str())
                     self.addHost(host.name_str(), **host_opts)
                     self.addLink(host.name_str(), core.name_str())
-    
+        
+
     def layer(self, name):
         ''' Return the layer of a node '''
         node = self.node_gen(name = name)
@@ -100,11 +102,10 @@ class FatTreeTopo(Topo):
     LAYER_EDGE = 2
     LAYER_HOST = 3
 
-    def __init__(self, k = 4, speed = 1.0):
+    def __init__(self, k = 4):
         ''' Create FatTree topology 
             
             k : Number of pods (can support upto k^3/4 hosts)
-            Speed : speed in Gbps
         '''
         super(FatTreeTopo, self).__init__()
 
