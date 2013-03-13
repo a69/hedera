@@ -52,7 +52,6 @@ def get_bisection_bw(input_file, pat_iface):
     vals = []
     for k in rate.keys():
         if pat_iface.match(k): 
-            print k
             avg_rate = avg(rate[k][10:-10])
             vals.append(avg_rate)
             
@@ -78,10 +77,9 @@ def plot_results(args):
     sw = '[0-3]_[0-1]_1'
     #edge_sws = '0_0_1', '0_1_1', '1_0_1', '1_1_1', '2_0_1','2_1_1','3_0_1','3_1_1'
     for t in traffics:
-        print t
+        print "ECMP:", t
         input_file = args.files + '/fattree-ecmp/%s/rate.txt' % t
         vals = get_bisection_bw(input_file, sw)
-        print vals
         bb['ecmp'].append(vals/fbb/2)
 
     print bb
@@ -92,7 +90,7 @@ def plot_results(args):
     fig.set_size_inches(18.5,6.5)
 
     for i in range(num_plot):
-        fig.set_size_inches(20,10)
+        fig.set_size_inches(24,12)
 
         ax = fig.add_subplot(2,1,i+1)
         ax.yaxis.grid()
