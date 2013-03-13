@@ -21,7 +21,7 @@ class FatTreeNode(object):
             self.dpid = dpid
         else:
             if name:
-                pod, sw, host = [int(s) for s in name.split('_')]
+                pod, sw, host = [int(s) for s in name.split('h')]
             
             self.pod = pod
             self.sw = sw
@@ -30,7 +30,7 @@ class FatTreeNode(object):
 
     def name_str(self):
         ''' Return name '''
-        return "%i_%i_%i" % (self.pod, self.sw, self.host)
+        return "%ih%ih%i" % (self.pod, self.sw, self.host)
 
     def ip_str(self):
         ''' Return IP address '''
@@ -161,7 +161,13 @@ class FatTreeTopo(Topo):
             layer = self.LAYER_HOST
         
         return layer
-    
+   
+    def isPortUp(self, port):
+        if port > (self.k/2):
+            return True
+        else:
+            return False
+
     def layer_nodes(self, layer):
         ''' Return nodes at the given layer '''
         return [n for n in self.g.nodes() if self.layer(n) == layer]
