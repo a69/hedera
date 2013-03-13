@@ -119,9 +119,7 @@ class DCController(EventMixin):
         hash_ = self._ecmp_hash(packet)
         route = self.r.get_route(in_name, out_name, hash_) 
         if route is None:
-            print in_name, out_name
             return
-        print route
 
         match = of.ofp_match.from_packet(packet)
         for i, node in enumerate(route):
@@ -148,20 +146,15 @@ class DCController(EventMixin):
         # Learn MAC address of the sender on every packet-in.
         self.macTable[packet.src] = (dpid, in_port)
 
-        print '-'*80 
-        print packet.src, packet.dst
-        
     
         # Insert flow, deliver packet directly to destination.
         if packet.dst in self.macTable:
-            print 'Route:'
             out_dpid, out_port = self.macTable[packet.dst]
             self._install_reactive_path(event, out_dpid, out_port, packet)
         
             self.switches[out_dpid].send_packet_data(out_port, event.data)
             
         else:
-            print 'Flood'
             self._flood(event)
 
     def _handle_ConnectionUp(self, event):
