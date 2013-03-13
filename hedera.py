@@ -45,6 +45,9 @@ parser.add_argument('-p', '--cpu', dest='cpu', type=float, default=-1,
 parser.add_argument('-n', '--nonblocking', dest='nonblocking', default=False,
         action='store_true', help='Run the experiment on the noneblocking topo')
 
+parser.add_argument('--iperf', dest='iperf', default=False, action='store_true',
+        help='Use iperf to generate traffics')
+
 args = parser.parse_args()
 
 def NonBlockingNet(k=4, bw=10, cpu=-1, queue=100):
@@ -62,7 +65,7 @@ def NonBlockingNet(k=4, bw=10, cpu=-1, queue=100):
 def FatTreeNet(k=4, bw=10, cpu=-1, queue=100):
     ''' Create a Fat-Tree network '''
 
-    pox_c = Popen("~/pox/pox.py DCController --topo=ft,4 --routing=ECMP", shell=True)
+    pox_c = Popen("~/pox/pox.py HController --topo=ft,4 --routing=ECMP", shell=True)
 
     info('*** Creating the topology')
     topo = FatTreeTopo(k)
@@ -180,8 +183,11 @@ def ECMPTest(args):
     #net.pingAll()
  
     hosts = net.hosts
-    trafficGen(args, hosts, net)
-    #iperfTrafficGen(args, hosts, net)
+    
+    if args.iperf:
+        iperfTrafficGen(args, hosts, net)
+    else:
+        trafficGen(args, hosts, net)
 
     net.stop()
 
@@ -196,9 +202,10 @@ def NonBlockingTest(args):
 
     hosts = net.hosts
 
-
-    #iperfTrafficGen(args, hosts, net)
-    trafficGen(args, hosts, net)
+    if args.iperf:
+        iperfTrafficGen(args, hosts, net)
+    else:
+        trafficGen(args, hosts, net)
 
     net.stop()
 
