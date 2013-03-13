@@ -59,7 +59,6 @@ class NonBlockingTopo(Topo):
         
         core = self.node_gen(k, 1, 1)
         core_opts = self.def_opts(core.name_str())
-        print core_opts
         self.addSwitch(core.name_str(), **core_opts)
 
         for p in pods:
