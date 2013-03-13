@@ -62,8 +62,8 @@ def plot_results(args):
 
     fbb = 16. * 10  #160 mbps
 
-    num_plot = 1
-    num_t = 4
+    num_plot = 2
+    num_t = 20
     n_t = num_t/num_plot
 
     bb = {'nonblocking' : [], 'ecmp' : []}
