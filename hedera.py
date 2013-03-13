@@ -75,6 +75,63 @@ def FatTreeNet(k=4, bw=10, cpu=-1, queue=100):
 
     return net
 
+def start_tcpprobe():
+    ''' Install tcp_probe module and dump to file '''
+    os.system("rmmod tcp_probe; modprobe tcp_probe full=1;")
+    Popen("cat /proc/net/tcpprobe > ~/hedera/tcp.txt" , shell=True)
+
+def stop_tcpprobe():
+    os.system("killall -9 cat")
+
+def iperfTrafficGen(args, hosts, net):
+    ''' Generate traffic pattern using iperf and monitor all of thr interfaces
+    
+    input format:
+    src_ip dst_ip dst_port type seed start_time stop_time flow_size r/e
+    repetitions time_between_flows r/e (rpc_delay r/e)
+    
+    '''
+    
+    host_list = {} 
+    for h in hosts:
+        host_list[h.IP()] = h
+    
+    port = 5001
+    
+    data = open(args.input_file)
+
+    start_tcpprobe()
+
+    info('*** Starting iperf ... ')
+    for line in data:
+        flow = line.split(' ')
+        src_ip = flow[0]
+        dst_ip = flow[1]
+        
+        if src_ip not in host_list:
+            continue
+        
+        server = host_list[dst_ip]
+        server.popen('iperf -s -p %s > ~/hedera/server.txt' % port, shell = True)
+
+        client = host_list[src_ip]
+        client.popen('iperf -c %s -p %s -t %d > ~/hedera/client.txt' 
+                % (server.IP(), port, args.time + 10 ), shell=True)
+
+    monitor = multiprocessing.Process(target = monitor_devs_ng, args =
+                ('%s/rate.txt' % args.output_dir, 0.01))
+
+    monitor.start()
+
+    sleep(args.time)
+
+    monitor.terminate()
+    
+    info('*** stoping iperf ...')
+    stop_tcpprobe()
+
+    Popen("killall iperf", shell=True).wait()
+
 def trafficGen(args, hosts, net):
     ''' Run the traffic generator and monitor all of the interfaces '''
     listen_port = 12345
@@ -124,6 +181,7 @@ def ECMPTest(args):
  
     hosts = net.hosts
     trafficGen(args, hosts, net)
+    #iperfTrafficGen(args, hosts, net)
 
     net.stop()
 
@@ -137,6 +195,9 @@ def NonBlockingTest(args):
     #net.pingAll()
 
     hosts = net.hosts
+
+
+    #iperfTrafficGen(args, hosts, net)
     trafficGen(args, hosts, net)
 
     net.stop()
