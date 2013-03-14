@@ -115,12 +115,11 @@ def iperfTrafficGen(args, hosts, net):
     
     start_tcpprobe()
     
-    info('*** Starting iperf ... ')
+    info('*** Starting iperf ...\n')
     for line in data:
         flow = line.split(' ')
         src_ip = flow[0]
         dst_ip = flow[1]
-        print"client IP:", src_ip, "server IP:", dst_ip        
         if src_ip not in host_list:
             continue
         sleep(0.2)        
@@ -140,7 +139,7 @@ def iperfTrafficGen(args, hosts, net):
 
     monitor.terminate()
     
-    info('*** stoping iperf ...')
+    info('*** stoping iperf ...\n')
     stop_tcpprobe()
 
     Popen("killall iperf", shell=True).wait()
