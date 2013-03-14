@@ -1,3 +1,7 @@
+'''
+@author: Milad Sharif (msharif@stanfor.edu)
+'''
+
 from mininet.topo import Topo
 from mininet.node import Controller, RemoteController, OVSKernelSwitch, CPULimitedHost
 from mininet.net import Mininet
@@ -48,6 +52,12 @@ parser.add_argument('-n', '--nonblocking', dest='nonblocking', default=False,
 parser.add_argument('--iperf', dest='iperf', default=False, action='store_true',
         help='Use iperf to generate traffics')
 
+parser.add_argument('--hedera',dest='hedera', default=False,
+        action='store_true', help='Run the experiment with hedera GFF scheduler')
+
+parser.add_argument('--ecmp',dest='ECMP',default=False,
+        action='store_true',help='Run the experiment with ECMP routing')
+
 args = parser.parse_args()
 
 def NonBlockingNet(k=4, bw=10, cpu=-1, queue=100):
@@ -62,10 +72,10 @@ def NonBlockingNet(k=4, bw=10, cpu=-1, queue=100):
 
     return net
 
-def FatTreeNet(k=4, bw=10, cpu=-1, queue=100):
+def FatTreeNet(k=4, bw=10, cpu=-1, queue=100,controller='HController'):
     ''' Create a Fat-Tree network '''
 
-    pox_c = Popen("~/pox/pox.py HController --topo=ft,4 --routing=ECMP", shell=True)
+    pox_c = Popen("~/pox/pox.py %s --topo=ft,4 --routing=ECMP"%controller, shell=True)
 
     info('*** Creating the topology')
     topo = FatTreeTopo(k)
@@ -102,24 +112,24 @@ def iperfTrafficGen(args, hosts, net):
     port = 5001
     
     data = open(args.input_file)
-
+    
     start_tcpprobe()
-
+    
     info('*** Starting iperf ... ')
     for line in data:
         flow = line.split(' ')
         src_ip = flow[0]
         dst_ip = flow[1]
-        
+        print"client IP:", src_ip, "server IP:", dst_ip        
         if src_ip not in host_list:
             continue
-        
+        sleep(0.2)        
         server = host_list[dst_ip]
         server.popen('iperf -s -p %s > ~/hedera/server.txt' % port, shell = True)
 
         client = host_list[src_ip]
         client.popen('iperf -c %s -p %s -t %d > ~/hedera/client.txt' 
-                % (server.IP(), port, args.time + 10 ), shell=True)
+                % (server.IP(), port, args.time ), shell=True)
 
     monitor = multiprocessing.Process(target = monitor_devs_ng, args =
                 ('%s/rate.txt' % args.output_dir, 0.01))
@@ -172,16 +182,15 @@ def trafficGen(args, hosts, net):
     for h in hosts:
         h.cmd('killall loadgen')
 
-def ECMPTest(args):
-    net = FatTreeNet( k=K, cpu=args.cpu, bw=BW, queue=QUEUE_SIZE)
+def FatTreeTest(args,controller):
+    net = FatTreeNet( k=K, cpu=args.cpu, bw=BW, queue=QUEUE_SIZE,
+            controller=controller)
     net.start()
 
     # wait for the switches to connect to the controller
     info('** Waiting for switches to connect to the controller\n')
     sleep(5)
 
-    #net.pingAll()
- 
     hosts = net.hosts
     
     if args.iperf:
@@ -197,8 +206,6 @@ def NonBlockingTest(args):
 
     info('** Waiting for switches to connect to the controller\n')
     sleep(1)
-
-    #net.pingAll()
 
     hosts = net.hosts
 
@@ -234,9 +241,13 @@ if __name__ == '__main__':
 
     if args.nonblocking:
         NonBlockingTest(args)
+    elif args.ECMP:
+        FatTreeTest(args,controller='DCController')
+    elif args.hedera:
+        FatTreeTest(args,controller='HController')
     else:
-        ECMPTest(args)
-
+        info('**error** please specify either hedera, ecmp, or nonblocking\n')
+        
     clean()
 
     Popen("killall -9 top bwm-ng", shell=True).wait()
