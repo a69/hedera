@@ -1,6 +1,8 @@
 ''' Simple data center controller
 
     @author Milad Sharif (msharif@stanford.edu)
+    
+    based on riplpox 
 '''
 
 import logging
@@ -52,9 +54,13 @@ class Switch(EventMixin):
         msg.buffer_id = buffer_id
         self.connection.send(msg)
                         
-    def install(self, port, match, buf = -1, idle_timeout = 0, hard_timeout = 0):
+    def install(self, port, match, modify = False, buf = -1, idle_timeout = 0, hard_timeout = 0):
         msg = of.ofp_flow_mod()
         msg.match = match
+        if modify:
+            msg.command = of.OFPFC_MODIFY_STRICT
+        else: 
+            msg.command = of.OFPFC_ADD
         msg.idle_timeout = idle_timeout
         msg.hard_timeout = hard_timeout
         msg.actions.append(of.ofp_action_output(port = port))

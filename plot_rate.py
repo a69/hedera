@@ -1,3 +1,6 @@
+'''
+@author: Milad Sharif(msharif@stanford.edu)
+'''
 
 from monitor.helper import *
 from math import fsum
@@ -65,24 +68,28 @@ def plot_results(args):
     num_t = 20
     n_t = num_t/num_plot
 
-    bb = {'nonblocking' : [], 'ecmp' : []}
+    bb = {'nonblocking' : [],'hedera' :  [], 'ecmp' : []}
 
-    sw = '4_1_1'
+    sw = '4h1h1'
     for t in traffics:
         print "Nonblocking:", t
         input_file = args.files + '/nonblocking/%s/rate.txt' % t    
         vals = get_bisection_bw(input_file, sw)
         bb['nonblocking'].append(vals/fbb)
 
-    sw = '[0-3]_[0-1]_1'
-    #edge_sws = '0_0_1', '0_1_1', '1_0_1', '1_1_1', '2_0_1','2_1_1','3_0_1','3_1_1'
+    sw = '[0-3]h[0-1]h1'
     for t in traffics:
         print "ECMP:", t
         input_file = args.files + '/fattree-ecmp/%s/rate.txt' % t
         vals = get_bisection_bw(input_file, sw)
         bb['ecmp'].append(vals/fbb/2)
+   
+    for t in traffics:
+       print "Hedera:", t
+       input_file = args.files + '/fattree-hedera/%s/rate.txt' % t
+       vals = get_bisection_bw(input_file, sw)
+       bb['hedera'].append(vals/fbb/2)
 
-    print bb
 
     ind = np.arange(n_t)
     width = 0.2
@@ -101,13 +108,16 @@ def plot_results(args):
         plt.xticks(ind + 2.5*width, labels[i*n_t:(i+1)*n_t])
     
         # Nonblocking
-        p1 = plt.bar(ind + 2.5*width, bb['nonblocking'][i*n_t:(i+1)*n_t], width=width,
+        p1 = plt.bar(ind + 3.5*width, bb['nonblocking'][i*n_t:(i+1)*n_t], width=width,
                 color='royalblue')
     
-        # FatTree + ECMP
-        p2 = plt.bar(ind + 1.5*width, bb['ecmp'][i*n_t:(i+1)*n_t], width=width, color='brown')
+        # FatTree + Hedera
+        p2 = plt.bar(ind + 2.5*width, bb['hedera'][i*n_t:(i+1)*n_t], width=width, color='green')
 
-        plt.legend([p1[0], p2[0]],['Non-blocking', 'ECMP'],loc='upper left')
+        # FatTree + ECMP
+        p3 = plt.bar(ind + 1.5*width, bb['ecmp'][i*n_t:(i+1)*n_t], width=width, color='brown')
+
+        plt.legend([p1[0], p2[0], p3[0]],['Non-blocking', 'Hedera','ECMP'],loc='upper left')
 
         plt.savefig(args.out)
 
