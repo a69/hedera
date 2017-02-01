@@ -55,6 +55,9 @@ parser.add_argument('--iperf', dest='iperf', default=False, action='store_true',
 parser.add_argument('--hedera',dest='hedera', default=False,
         action='store_true', help='Run the experiment with hedera GFF scheduler')
 
+parser.add_argument('--new-hedera',dest='newHedera', default=False,
+        action='store_true', help='Run the experiment with hedera sorted scheduler')
+
 parser.add_argument('--ecmp',dest='ECMP',default=False,
         action='store_true',help='Run the experiment with ECMP routing')
 
@@ -242,6 +245,8 @@ if __name__ == '__main__':
         NonBlockingTest(args)
     elif args.ECMP:
         FatTreeTest(args,controller='DCController')
+    elif args.newHedera:
+        FatTreeTest(args,controller='HNewController')
     elif args.hedera:
         FatTreeTest(args,controller='HController')
     else:
